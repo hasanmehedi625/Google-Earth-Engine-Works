@@ -1,27 +1,30 @@
-Map.addLayer(BD);
-var l8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR');
+/* Define point of interest to spatially filter data
+ee.Geometry.Point() function as demonstrated here.*/
+// var BD = ee.Geometry.BD;
+
+/* Import the Landsat 8 Surface Reflectance image collection. */
+
 
 /* Get the least cloudy image in May 2021. */
 var image = ee.Image(
   l8.filterBounds(BD)
-    .filterDate('2021-05-01', '2021-05-31')
-    .sort('CLOUD_COVER')
-    .first()
+    .filterDate('2021-01-01', '2021-05-31')
+    // .sort('CLOUD_COVER')
+    // .first()
+    .mosaic()
+    .clip(BD)
 );
 
 /* View selected image metadata */
 print(image)
 
 /* Select and rename bands */
-image = image.select(['B5','B4','B2'],['nir','red','blue']);
-
-//variable declaration
-var nir = image.select('nir')
-var red = image.select('red')
-
-
+image = image.select(['SR_B5','SR_B4','SR_B2'],['nir','red','blue']);
+print (image)
 /* Compute the Normalized Difference Vegetation Index (NDVI).
 NDVI = (NIR - Red) / (NIR + Red) */
+var nir = image.select('nir');
+var red = image.select('red');
 var ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI');
 var ndvi = image.normalizedDifference(['nir','red']);
 
@@ -53,7 +56,7 @@ var savi = image.expression(
 
 var saviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 Map.addLayer(savi, saviParams, 'SAVI image');
-Map.centerObject(image, 9);
+// Map.centerObject(image, 9);
 
 
 /* Mapping an index over a collection. */
@@ -80,10 +83,13 @@ print(collection)
 Map.addLayer(evi, eviParams, 'EVI Collection image')
 
 Export.image.toDrive({
-  image: image,
+  image: ndvi,
   description: 'NDVI_BD',
-  folder: 'EE basics',
+  folder: 'GEE',
   region: BD,
-  scale: 30,
-  crs: 'EPSG:5070'
+  scale: 30,  // Adjust scale if needed (see previous explanation)
+  // crs: 'EPSG:5070'
+  maxPixels: 1E2, // Reduce maxPixels for smaller masks (optional)
+  // fileFormat: 'GeoTIFF'
+  
 });
